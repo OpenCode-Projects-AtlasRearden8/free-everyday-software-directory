@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Free Software Your Household Deserves</title>
+<meta name="description" content="A plain-English directory of genuinely free software for every household. No affiliate links, no upsells, just honest tools.">
+<style>
+  :root {
+    --bg: #faf7f2;
+    --card: #ffffff;
+    --ink: #2c2a26;
+    --muted: #6b665e;
+    --accent: #2f6f4f;
+    --accent-soft: #e4efe8;
+    --line: #e5dfd4;
+    --warn: #8a5a00;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Georgia, "Times New Roman", serif;
+    line-height: 1.6;
+    color: var(--ink);
+    background: var(--bg);
+  }
+  header {
+    text-align: center;
+    padding: 3rem 1rem 2rem;
+    border-bottom: 1px solid var(--line);
+  }
+  header h1 { font-size: 2.2rem; margin: 0 0 .5rem; }
+  header p { color: var(--muted); max-width: 42rem; margin: 0 auto; }
+  .controls {
+    max-width: 68rem;
+    margin: 0 auto;
+    padding: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem;
+    justify-content: center;
+    align-items: center;
+  }
+  #search {
+    font-family: inherit;
+    font-size: 1rem;
+    padding: .55rem .9rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    min-width: 16rem;
+    flex: 1 1 16rem;
+    max-width: 22rem;
+    background: var(--card);
+  }
+  .filters { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .filters button {
+    font-family: inherit;
+    font-size: .9rem;
+    padding: .4rem .8rem;
+    border: 1px solid var(--line);
+    background: var(--card);
+    border-radius: 999px;
+    cursor: pointer;
+    color: var(--ink);
+  }
+  .filters button.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  main {
+    max-width: 68rem;
+    margin: 0 auto;
+    padding: 1rem;
+  }
+  #grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+    gap: 1rem;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 1.1rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+  }
+  .card h2 { font-size: 1.25rem; margin: 0 0 .2rem; }
+  .card .tagline { color: var(--accent); font-style: italic; margin: 0 0 .8rem; }
+  .badges { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: .7rem; }
+  .badge {
+    font-size: .75rem;
+    font-family: "Courier New", monospace;
+    padding: .15rem .55rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--accent-soft);
+    color: var(--ink);
+  }
+  .badge.free-yes { background: #e4efe8; color: var(--accent); border-color: var(--accent); }
+  .badge.difficulty-easy { background: #eef2e4; }
+  .badge.difficulty-medium { background: #fdf3d7; color: var(--warn); border-color: #e0c469; }
+  .card p { margin: .35rem 0; }
+  .card details { margin-top: .6rem; border-top: 1px dashed var(--line); padding-top: .5rem; }
+  .card summary {
+    cursor: pointer;
+    font-weight: bold;
+    color: var(--accent);
+    margin: .2rem 0;
+  }
+  .card ol { padding-left: 1.2rem; margin: .4rem 0; }
+  .limits { color: var(--warn); }
+  .meta {
+    margin-top: auto;
+    font-size: .78rem;
+    color: var(--muted);
+    padding-top: .6rem;
+  }
+  .meta a { color: var(--accent); }
+  footer {
+    text-align: center;
+    color: var(--muted);
+    padding: 2rem 1rem 3rem;
+    font-size: .85rem;
+    border-top: 1px solid var(--line);
+    margin-top: 2rem;
+  }
+  #no-results {
+    display: none;
+    text-align: center;
+    color: var(--muted);
+    padding: 2rem;
+    grid-column: 1 / -1;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Free Software Every Household Deserves</h1>
+  <p>Programs that are genuinely free &mdash; free software, not just free balloons with strings attached.
+     No trials, no subscriptions, no affiliate links, no upsell pop-ups. Written plain-English, like a friend would.</p>
+</header>
+
+<div class="controls">
+  <input id="search" type="search" placeholder="Search by name or what it does..." aria-label="Search the directory">
+  <div class="filters" id="filters" role="group" aria-label="Filter by category"></div>
+</div>
+
+<main>
+  <div id="grid"><p id="no-results">Nothing matched. Try a different word or choose 'All'.</p></div>
+</main>
+
+<footer>
+  <p>Every entry lists when its free license was last verified and when it is due to be rechecked.
+     Difficulty ratings describe install effort, not skill level. Read the honest limits before you commit time.</p>
+  <p>An open project by <strong>Asdale Dynamics, LLC</strong>. Provided under the MIT License.</p>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var ORIGINAL = [];
+  var grid = null;
+  var noResults = null;
+  var searchBox = null;
+  var filtersEl = null;
+  var currentCategory = "all";
+
+  function badge(text, extraClass) {
+    var span = document.createElement("span");
+    span.className = "badge" + (extraClass ? " " + extraClass : "");
+    span.textContent = text;
+    return span;
+  }
+
+  var CATEGORY_LABELS = {
+    office: "Office",
+    photos: "Photos & Graphics",
+    audio: "Audio",
+    media: "Media Players",
+    files: "Files & Sync",
+    documents: "Documents & Readers",
+    security: "Passwords & Security"
+  };
+
+  function categoryLabel(key) {
+    return CATEGORY_LABELS[key] || key;
+  }
+
+  function matches(app, query, category) {
+    if (category && category !== "all" && app.category !== category) return false;
+    if (!query) return true;
+    var hay = [
+      app.name, app.tagline, app.whatItDoes, app.category,
+      app.license || "", Array.isArray(app.platforms) ? app.platforms.join(" ") : ""
+    ].join(" ").toLowerCase();
+    return hay.indexOf(query) !== -1;
+  }
+
+  function renderList(apps) {
+    while (grid.firstChild) grid.removeChild(grid.firstChild);
+    apps.forEach(function (app) { grid.appendChild(renderCard(app)); });
+    if (noResults) {
+      noResults.style.display = apps.length ? "none" : "block";
+      grid.appendChild(noResults);
+    }
+  }
+
+  function renderCard(app) {
+    var card = document.createElement("article");
+    card.className = "card";
+    card.setAttribute("data-app-id", app.id || "");
+
+    var h2 = document.createElement("h2");
+    h2.textContent = app.name;
+    card.appendChild(h2);
+
+    var tag = document.createElement("p");
+    tag.className = "tagline";
+    tag.textContent = app.tagline || "";
+    card.appendChild(tag);
+
+    var badges = document.createElement("div");
+    badges.className = "badges";
+    if (app.trulyFree !== "yes") {
+      badges.appendChild(badge("Truly free: " + app.trulyFree, "difficulty-medium"));
+    } else {
+      badges.appendChild(badge("Truly free: yes", "free-yes"));
+    }
+    badges.appendChild(badge("Install: " + app.installDifficulty, "difficulty-" + app.installDifficulty));
+    badges.appendChild(badge(categoryLabel(app.category)));
+    card.appendChild(badges);
+
+    var does = document.createElement("p");
+    does.textContent = app.whatItDoes || "";
+    card.appendChild(does);
+
+    var stepsDetails = document.createElement("details");
+    var stepsSummary = document.createElement("summary");
+    stepsSummary.textContent = "Safe first steps";
+    stepsDetails.appendChild(stepsSummary);
+    var ol = document.createElement("ol");
+    String(app.installSteps || "")
+      .split(/(?=\d+\.\s)/)
+      .filter(function (s) { return s.trim(); })
+      .forEach(function (step) {
+        var li = document.createElement("li");
+        li.textContent = step.replace(/^\d+\.\s+/, "").trim();
+        ol.appendChild(li);
+      });
+    stepsDetails.appendChild(ol);
+    card.appendChild(stepsDetails);
+
+    var limitsDetails = document.createElement("details");
+    var limitsSummary = document.createElement("summary");
+    limitsSummary.textContent = "Honest limits";
+    limitsDetails.appendChild(limitsSummary);
+    var limits = document.createElement("p");
+    limits.className = "limits";
+    limits.textContent = app.honestLimits || "";
+    limitsDetails.appendChild(limits);
+    card.appendChild(limitsDetails);
+
+    var meta = document.createElement("p");
+    meta.className = "meta";
+    var bits = [];
+    bits.push("Verified free on: " + app.verifiedFreeOn);
+    bits.push("Recheck: " + app.recheckDate);
+    bits.push("License: " + (app.license || "unknown"));
+    bits.push((Array.isArray(app.platforms) ? app.platforms.join(", ") : ""));
+    if (app.sizeEstimate) bits.push(app.sizeEstimate);
+    bits.forEach(function (t, i) {
+      if (i > 0) meta.appendChild(document.createElement("br"));
+      meta.appendChild(document.createTextNode(t));
+    });
+    if (app.website) {
+      meta.appendChild(document.createElement("br"));
+      var a = document.createElement("a");
+      a.href = app.website;
+      a.textContent = "Official website (check the address carefully)";
+      a.rel = "noopener noreferrer";
+      meta.appendChild(a);
+    }
+    card.appendChild(meta);
+    return card;
+  }
+
+  function buildFilters(apps) {
+    var seen = Object.create(null);
+    apps.forEach(function (a) { if (a.category) seen[a.category] = true; });
+    var cats = Object.keys(seen).sort(function (a, b) {
+      return categoryLabel(a).localeCompare(categoryLabel(b));
+    });
+    ["all"].concat(cats).forEach(function (cat) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.setAttribute("data-cat", cat);
+      btn.textContent = cat === "all" ? "All" : categoryLabel(cat);
+      if (cat === currentCategory) btn.classList.add("active");
+      btn.addEventListener("click", function () {
+        currentCategory = cat;
+        Array.prototype.forEach.call(filtersEl.children, function (b) {
+          b.classList.toggle("active", b.getAttribute("data-cat") === cat);
+        });
+        apply();
+      });
+      filtersEl.appendChild(btn);
+    });
+  }
+
+  function apply() {
+    var q = (searchBox.value || "").trim().toLowerCase();
+    renderList(ORIGINAL.filter(function (a) { return matches(a, q, currentCategory); }));
+  }
+
+  function fail(msg) {
+    var g = document.getElementById("grid") || grid;
+    if (g) g.innerHTML = "";
+    var p = document.createElement("p");
+    p.id = "no-results";
+    p.style.display = "block";
+    p.textContent = msg;
+    (g || document.body).appendChild(p);
+  }
+
+  function start(data) {
+    var parsed;
+    grid = document.getElementById("grid");
+    noResults = document.getElementById("no-results");
+    searchBox = document.getElementById("search");
+    filtersEl = document.getElementById("filters");
+    try {
+      parsed = JSON.parse(data);
+    } catch (e) {
+      fail("Sorry, the app list could not be read: " + e.message);
+      return;
+    }
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      fail("Sorry, the app list is empty.");
+      return;
+    }
+    ORIGINAL = parsed;
+    buildFilters(ORIGINAL);
+    searchBox.addEventListener("input", apply);
+    apply();
+  }
+
+  function init() {
+    var ready = function () {
+      var script = document.getElementById("apps-data");
+      if (!script) return fail("The app list is missing from this page. Re-run build.py.");
+      if (!script.textContent.trim()) {
+        return fail("This is the template, not the finished page. Run: python3 build.py");
+      }
+      start(script.textContent);
+    };
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", ready);
+    } else {
+      ready();
+    }
+  }
+
+  init();
+})();
+</script>
+<script id="apps-data" type="application/json">{{APPS_JSON}}</script>
+</body>
+</html>

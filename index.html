@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Free Software Your Household Deserves</title>
+<meta name="description" content="A plain-English directory of genuinely free software for every household. No affiliate links, no upsells, just honest tools.">
+<style>
+  :root {
+    --bg: #faf7f2;
+    --card: #ffffff;
+    --ink: #2c2a26;
+    --muted: #6b665e;
+    --accent: #2f6f4f;
+    --accent-soft: #e4efe8;
+    --line: #e5dfd4;
+    --warn: #8a5a00;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Georgia, "Times New Roman", serif;
+    line-height: 1.6;
+    color: var(--ink);
+    background: var(--bg);
+  }
+  header {
+    text-align: center;
+    padding: 3rem 1rem 2rem;
+    border-bottom: 1px solid var(--line);
+  }
+  header h1 { font-size: 2.2rem; margin: 0 0 .5rem; }
+  header p { color: var(--muted); max-width: 42rem; margin: 0 auto; }
+  .controls {
+    max-width: 68rem;
+    margin: 0 auto;
+    padding: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem;
+    justify-content: center;
+    align-items: center;
+  }
+  #search {
+    font-family: inherit;
+    font-size: 1rem;
+    padding: .55rem .9rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    min-width: 16rem;
+    flex: 1 1 16rem;
+    max-width: 22rem;
+    background: var(--card);
+  }
+  .filters { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .filters button {
+    font-family: inherit;
+    font-size: .9rem;
+    padding: .4rem .8rem;
+    border: 1px solid var(--line);
+    background: var(--card);
+    border-radius: 999px;
+    cursor: pointer;
+    color: var(--ink);
+  }
+  .filters button.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  main {
+    max-width: 68rem;
+    margin: 0 auto;
+    padding: 1rem;
+  }
+  #grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+    gap: 1rem;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 1.1rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+  }
+  .card h2 { font-size: 1.25rem; margin: 0 0 .2rem; }
+  .card .tagline { color: var(--accent); font-style: italic; margin: 0 0 .8rem; }
+  .badges { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: .7rem; }
+  .badge {
+    font-size: .75rem;
+    font-family: "Courier New", monospace;
+    padding: .15rem .55rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--accent-soft);
+    color: var(--ink);
+  }
+  .badge.free-yes { background: #e4efe8; color: var(--accent); border-color: var(--accent); }
+  .badge.difficulty-easy { background: #eef2e4; }
+  .badge.difficulty-medium { background: #fdf3d7; color: var(--warn); border-color: #e0c469; }
+  .card p { margin: .35rem 0; }
+  .card details { margin-top: .6rem; border-top: 1px dashed var(--line); padding-top: .5rem; }
+  .card summary {
+    cursor: pointer;
+    font-weight: bold;
+    color: var(--accent);
+    margin: .2rem 0;
+  }
+  .card ol { padding-left: 1.2rem; margin: .4rem 0; }
+  .limits { color: var(--warn); }
+  .meta {
+    margin-top: auto;
+    font-size: .78rem;
+    color: var(--muted);
+    padding-top: .6rem;
+  }
+  .meta a { color: var(--accent); }
+  footer {
+    text-align: center;
+    color: var(--muted);
+    padding: 2rem 1rem 3rem;
+    font-size: .85rem;
+    border-top: 1px solid var(--line);
+    margin-top: 2rem;
+  }
+  #no-results {
+    display: none;
+    text-align: center;
+    color: var(--muted);
+    padding: 2rem;
+    grid-column: 1 / -1;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Free Software Every Household Deserves</h1>
+  <p>Programs that are genuinely free &mdash; free software, not just free balloons with strings attached.
+     No trials, no subscriptions, no affiliate links, no upsell pop-ups. Written plain-English, like a friend would.</p>
+</header>
+
+<div class="controls">
+  <input id="search" type="search" placeholder="Search by name or what it does..." aria-label="Search the directory">
+  <div class="filters" id="filters" role="group" aria-label="Filter by category"></div>
+</div>
+
+<main>
+  <div id="grid"><p id="no-results">Nothing matched. Try a different word or choose 'All'.</p></div>
+</main>
+
+<footer>
+  <p>Every entry lists when its free license was last verified and when it is due to be rechecked.
+     Difficulty ratings describe install effort, not skill level. Read the honest limits before you commit time.</p>
+  <p>An open project by <strong>Asdale Dynamics, LLC</strong>. Provided under the MIT License.</p>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var ORIGINAL = [];
+  var grid = null;
+  var noResults = null;
+  var searchBox = null;
+  var filtersEl = null;
+  var currentCategory = "all";
+
+  function badge(text, extraClass) {
+    var span = document.createElement("span");
+    span.className = "badge" + (extraClass ? " " + extraClass : "");
+    span.textContent = text;
+    return span;
+  }
+
+  var CATEGORY_LABELS = {
+    office: "Office",
+    photos: "Photos & Graphics",
+    audio: "Audio",
+    media: "Media Players",
+    files: "Files & Sync",
+    documents: "Documents & Readers",
+    security: "Passwords & Security"
+  };
+
+  function categoryLabel(key) {
+    return CATEGORY_LABELS[key] || key;
+  }
+
+  function matches(app, query, category) {
+    if (category && category !== "all" && app.category !== category) return false;
+    if (!query) return true;
+    var hay = [
+      app.name, app.tagline, app.whatItDoes, app.category,
+      app.license || "", Array.isArray(app.platforms) ? app.platforms.join(" ") : ""
+    ].join(" ").toLowerCase();
+    return hay.indexOf(query) !== -1;
+  }
+
+  function renderList(apps) {
+    while (grid.firstChild) grid.removeChild(grid.firstChild);
+    apps.forEach(function (app) { grid.appendChild(renderCard(app)); });
+    if (noResults) {
+      noResults.style.display = apps.length ? "none" : "block";
+      grid.appendChild(noResults);
+    }
+  }
+
+  function renderCard(app) {
+    var card = document.createElement("article");
+    card.className = "card";
+    card.setAttribute("data-app-id", app.id || "");
+
+    var h2 = document.createElement("h2");
+    h2.textContent = app.name;
+    card.appendChild(h2);
+
+    var tag = document.createElement("p");
+    tag.className = "tagline";
+    tag.textContent = app.tagline || "";
+    card.appendChild(tag);
+
+    var badges = document.createElement("div");
+    badges.className = "badges";
+    if (app.trulyFree !== "yes") {
+      badges.appendChild(badge("Truly free: " + app.trulyFree, "difficulty-medium"));
+    } else {
+      badges.appendChild(badge("Truly free: yes", "free-yes"));
+    }
+    badges.appendChild(badge("Install: " + app.installDifficulty, "difficulty-" + app.installDifficulty));
+    badges.appendChild(badge(categoryLabel(app.category)));
+    card.appendChild(badges);
+
+    var does = document.createElement("p");
+    does.textContent = app.whatItDoes || "";
+    card.appendChild(does);
+
+    var stepsDetails = document.createElement("details");
+    var stepsSummary = document.createElement("summary");
+    stepsSummary.textContent = "Safe first steps";
+    stepsDetails.appendChild(stepsSummary);
+    var ol = document.createElement("ol");
+    String(app.installSteps || "")
+      .split(/(?=\d+\.\s)/)
+      .filter(function (s) { return s.trim(); })
+      .forEach(function (step) {
+        var li = document.createElement("li");
+        li.textContent = step.replace(/^\d+\.\s+/, "").trim();
+        ol.appendChild(li);
+      });
+    stepsDetails.appendChild(ol);
+    card.appendChild(stepsDetails);
+
+    var limitsDetails = document.createElement("details");
+    var limitsSummary = document.createElement("summary");
+    limitsSummary.textContent = "Honest limits";
+    limitsDetails.appendChild(limitsSummary);
+    var limits = document.createElement("p");
+    limits.className = "limits";
+    limits.textContent = app.honestLimits || "";
+    limitsDetails.appendChild(limits);
+    card.appendChild(limitsDetails);
+
+    var meta = document.createElement("p");
+    meta.className = "meta";
+    var bits = [];
+    bits.push("Verified free on: " + app.verifiedFreeOn);
+    bits.push("Recheck: " + app.recheckDate);
+    bits.push("License: " + (app.license || "unknown"));
+    bits.push((Array.isArray(app.platforms) ? app.platforms.join(", ") : ""));
+    if (app.sizeEstimate) bits.push(app.sizeEstimate);
+    bits.forEach(function (t, i) {
+      if (i > 0) meta.appendChild(document.createElement("br"));
+      meta.appendChild(document.createTextNode(t));
+    });
+    if (app.website) {
+      meta.appendChild(document.createElement("br"));
+      var a = document.createElement("a");
+      a.href = app.website;
+      a.textContent = "Official website (check the address carefully)";
+      a.rel = "noopener noreferrer";
+      meta.appendChild(a);
+    }
+    card.appendChild(meta);
+    return card;
+  }
+
+  function buildFilters(apps) {
+    var seen = Object.create(null);
+    apps.forEach(function (a) { if (a.category) seen[a.category] = true; });
+    var cats = Object.keys(seen).sort(function (a, b) {
+      return categoryLabel(a).localeCompare(categoryLabel(b));
+    });
+    ["all"].concat(cats).forEach(function (cat) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.setAttribute("data-cat", cat);
+      btn.textContent = cat === "all" ? "All" : categoryLabel(cat);
+      if (cat === currentCategory) btn.classList.add("active");
+      btn.addEventListener("click", function () {
+        currentCategory = cat;
+        Array.prototype.forEach.call(filtersEl.children, function (b) {
+          b.classList.toggle("active", b.getAttribute("data-cat") === cat);
+        });
+        apply();
+      });
+      filtersEl.appendChild(btn);
+    });
+  }
+
+  function apply() {
+    var q = (searchBox.value || "").trim().toLowerCase();
+    renderList(ORIGINAL.filter(function (a) { return matches(a, q, currentCategory); }));
+  }
+
+  function fail(msg) {
+    var g = document.getElementById("grid") || grid;
+    if (g) g.innerHTML = "";
+    var p = document.createElement("p");
+    p.id = "no-results";
+    p.style.display = "block";
+    p.textContent = msg;
+    (g || document.body).appendChild(p);
+  }
+
+  function start(data) {
+    var parsed;
+    grid = document.getElementById("grid");
+    noResults = document.getElementById("no-results");
+    searchBox = document.getElementById("search");
+    filtersEl = document.getElementById("filters");
+    try {
+      parsed = JSON.parse(data);
+    } catch (e) {
+      fail("Sorry, the app list could not be read: " + e.message);
+      return;
+    }
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      fail("Sorry, the app list is empty.");
+      return;
+    }
+    ORIGINAL = parsed;
+    buildFilters(ORIGINAL);
+    searchBox.addEventListener("input", apply);
+    apply();
+  }
+
+  function init() {
+    var ready = function () {
+      var script = document.getElementById("apps-data");
+      if (!script) return fail("The app list is missing from this page. Re-run build.py.");
+      if (!script.textContent.trim()) {
+        return fail("This is the template, not the finished page. Run: python3 build.py");
+      }
+      start(script.textContent);
+    };
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", ready);
+    } else {
+      ready();
+    }
+  }
+
+  init();
+})();
+</script>
+<script id="apps-data" type="application/json">[{"id":"libreoffice","name":"LibreOffice","category":"office","tagline":"A full office suite that opens and saves Word, Excel, and PowerPoint files.","whatItDoes":"Write letters, build spreadsheets, and make slides without paying for Microsoft Office. Files you save in Office formats can be emailed to anyone and opened on their computer, and it can also save documents in its own open format (.odt) that never locks you in.","trulyFree":"yes","installDifficulty":"easy","installSteps":"1. Go to libreoffice.org and click Download. 2. Pick your operating system. 3. Run the installer you downloaded and click through it like any normal program. 4. Open it from your Start menu or Applications folder.","honestLimits":"It looks a little different from Word, so give yourself ten minutes to find your bearings. Very complex documents made in Word (fancy layouts, tracked changes from lawyers) can shift slightly when opened. It does not include email, calendar, or cloud storage.","verifiedFreeOn":"2026-10-30","recheckDate":"2027-04-30","license":"MPL-2.0","website":"https://www.libreoffice.org","platforms":["Windows","macOS","Linux"],"sizeEstimate":"About 350 MB"},{"id":"gimp","name":"GIMP","category":"photos","tagline":"Edit photos and draw, no subscription required.","whatItDoes":"Crop family photos, remove red-eye, resize pictures for email, erase things from backgrounds, and create graphics. It covers most of what people use Photoshop for at home, plus it opens Photoshop's .psd files.","trulyFree":"yes","installDifficulty":"easy","installSteps":"1. Go to gimp.org and click Download. 2. Choose your operating system. 3. Run the installer. On Windows, if the site offers a version from the Microsoft Store, either is fine. 4. Open it from your Start menu or Applications folder.","honestLimits":"The interface is powerful but not friendly on day one; expect a learning curve if you go beyond cropping and brightness. It handles many-but-not-all .psd features. Heavy RAW editing from fancy cameras is better done in Darktable (also on this list).","verifiedFreeOn":"2026-10-30","recheckDate":"2027-04-30","license":"GPL-3.0","website":"https://www.gimp.org","platforms":["Windows","macOS","Linux"],"sizeEstimate":"About 300 MB"},{"id":"audacity","name":"Audacity","category":"audio","tagline":"Record and clean up audio on your computer.","whatItDoes":"Record your voice (good for voicemail greetings, narration, podcasting), trim recordings, cut silence, reduce background hiss, and export to common formats. Great for digitizing cassette tapes or voice memos, too.","trulyFree":"yes","installDifficulty":"easy","installSteps":"1. Go to audacityteam.org and click Download. 2. Pick your operating system. 3. Run the installer. 4. If Windows asks whether to allow the app, click Yes. 5. Open it and pick your microphone under the input device menu.","honestLimits":"It is an editor, not music-making software; it will not replace a digital audio workstation. Exporting MP3 now uses a built-in encoder, but some very old tutorials still scare people it needs an optional fix. Its undo history is limited compared to pro tools.","verifiedFreeOn":"2026-06-15","recheckDate":"2026-12-15","license":"GPL-3.0","website":"https://www.audacityteam.org","platforms":["Windows","macOS","Linux"],"sizeEstimate":"About 60 MB"},{"id":"vlc","name":"VLC Media Player","category":"media","tagline":"Plays every video and audio file you throw at it.","whatItDoes":"Instead of hunting for codec packs, just open any video file, DVD, or odd internet stream with VLC and it plays. Also converts files between formats and can rip a DVD to a file for your own discs.","trulyFree":"yes","installDifficulty":"easy","installSteps":"1. Go to videolan.org and click Download VLC. 2. Run the installer. 3. During install, it may ask about privacy/network access metadata; uncheck if you want it fully offline. 4. Right-click any video file afterwards and choose Open with VLC.","honestLimits":"It plays things; it does not organize a library like some paid players, and there is no recommendations or store. The interface is functional, not beautiful. Some DRM'd streaming-service downloads still will not play, by design.","verifiedFreeOn":"2026-10-30","recheckDate":"2027-04-30","license":"GPL-2.0+","website":"https://www.videolan.org/vlc/","platforms":["Windows","macOS","Linux","Android","iOS"],"sizeEstimate":"About 70 MB"},{"id":"syncthing","name":"Syncthing","category":"files","tagline":"Keep a folder synced between your own devices, no cloud account needed.","whatItDoes":"Pick a folder on your laptop and the same folder on your desktop or phone; Syncthing keeps them identical over your own Wi-Fi or the internet, encrypted, with no company in the middle reading your files. This is the syncthing-style, local-first answer to Dropbox.","trulyFree":"yes","installDifficulty":"medium","installSteps":"1. Go to syncthing.net and click Downloads. 2. On Windows, grab the easy Windows installer (Synctrayz or the official one linked from the site). 3. On Android, install Syncthing-Fork from F-Droid. 4. Open the local web page it starts (usually http://127.0.0.1:8384), then on each device add the other device's ID and share the folder you want synced.","honestLimits":"Setup is genuinely more fiddly than a big-name cloud app; give it a quiet half hour the first time. It syncs, but it is not a backup: delete a file on one device and it disappears on the others. Pair it with a real backup tool.","verifiedFreeOn":"2026-10-30","recheckDate":"2027-04-30","license":"MPL-2.0","website":"https://syncthing.net","platforms":["Windows","macOS","Linux","Android"],"sizeEstimate":"About 40 MB"},{"id":"7zip","name":"7-Zip","category":"files","tagline":"Open and create ZIP files on Windows, or 7z archives.","whatItDoes":"Right-click any .zip, .rar, .7z, or .tar file and extract it, or right-click a folder to pack it into one file to email. Windows has built-in ZIP support but chokes on many other formats; 7-Zip opens nearly all of them.","trulyFree":"yes","installDifficulty":"easy","installSteps":"1. Go to 7-zip.org and click Download. 2. Pick the .exe that matches your 64-bit or 32-bit Windows (almost everyone is 64-bit). 3. Run it and click Install. 4. Right-click files and look for the 7-Zip menu.","honestLimits":"Windows-only (macOS and Linux have built-in unzip support, plus Keka on macOS). The interface is spartan; most people only need the right-click menu. It cannot open an encrypted archive without the password that the sender gave you.","verifiedFreeOn":"2026-10-30","recheckDate":"2027-04-30","license":"LGPL-2.1 / unRAR restriction","website":"https://www.7-zip.org","platforms":["Windows"],"sizeEstimate":"About 2 MB"},{"id":"keka-or-unarchiver","name":"Keka / The Unarchiver","category":"files","tagline":"The mac answer to 7-Zip: open strange archives, or pack them.","whatItDoes":"On a Mac, drag any archive onto Keka to compress it, or let The Unarchiver automatically open .rar, .7z, and .tar files that the built-in Archive Utility refuses. Together they cover what 7-Zip does on Windows.","trulyFree":"yes","installDifficulty":"easy","installSteps":"1. For The Unarchiver, open the Mac App Store and search for The Unarchiver (it is free there) or get it from theunarchiver.com. 2. For Keka, go to keka.io and download it, or get it on the App Store (App Store copy has a small price to support the developer; the direct download is free). 3. Open once, approve any Gatekeeper prompt.","honestLimits":"Keka's App Store listing costs a few dollars by Apple's rules, but the download from keka.io is the same app for nothing. The Unarchiver extracts but does not create archives. Neither handles passwords you do not have.","verifiedFreeOn":"2026-10-30","recheckDate":"2027-04-30","license":"The Unarchiver: LGPL-2.1; Keka: GPL-2.0+","website":"https://www.keka.io / https://theunarchiver.com","platforms":["macOS"],"sizeEstimate":"About 10 MB"},{"id":"sumatra-pdf","name":"Sumatra PDF","category":"documents","tagline":"A plain-English, no-nonsense PDF reader for Windows.","whatItDoes":"Open PDF and e-book files instantly, without the update nag screens, toolbars, and permission prompts that come with the giant-name PDF reader. It starts fast and just shows your document. Also reads EPUB, MOBI, CBZ comic books, and XPS files.","trulyFree":"yes","installDifficulty":"easy","installSteps":"1. Go to sumatrapdfreader.org and click Download. 2. Run the installer (or grab the portable .zip version that needs no install at all). 3. When you double-click a PDF, Windows will ask what to open it with; choose Sumatra and tick \"always\".","honestLimits":"It is read-only: you cannot fill in forms or sign documents with it (use your browser or LibreOffice Draw for that). Windows only; on macOS and Linux your browser already opens PDFs fine. Comments and markups are out of scope.","verifiedFreeOn":"2026-10-30","recheckDate":"2027-04-30","license":"GPL-3.0 / BSD","website":"https://sumatrapdfreader.org","platforms":["Windows"],"sizeEstimate":"About 10 MB"},{"id":"keepassxc","name":"KeePassXC","category":"security","tagline":"One encrypted file that remembers all your passwords.","whatItDoes":"Store every password in a single vault file protected by one strong master passphrase. It auto-fills logins in your browser and tells you which of your passwords are weak or reused. The vault file is yours; nothing lives on someone else's server.","trulyFree":"yes","installDifficulty":"easy","installSteps":"1. Go to keepassxc.org and click Download. 2. Run the installer for your operating system. 3. Also install the KeePassXC-Browser extension in your browser if you want autofill. 4. Create a database, set a passphrase you can remember but nobody can guess, and write it down somewhere safe at home.","honestLimits":"Unlike password managers built into browsers, you must save the vault file somewhere (a USB stick, Syncthing) to get it on all your devices. Forget your master passphrase and the file is unrecoverable. No official phone app is made by the same team; use KeePassDX or Strongbox on mobile, which open the same vault format.","verifiedFreeOn":"2026-10-30","recheckDate":"2027-04-30","license":"GPL-3.0","website":"https://keepassxc.org","platforms":["Windows","macOS","Linux"],"sizeEstimate":"About 50 MB"},{"id":"inkscape","name":"Inkscape","category":"photos","tagline":"Draw logos and graphics that stay sharp at any size (vector editing).","whatItDoes":"Where GIMP edits photos (dots), Inkscape draws shapes and text (lines), which is what you want for logos, labels, yard-sale signs, and anything you might print big. Opens and saves SVG files, plus Adobe Illustrator files reasonably well.","trulyFree":"yes","installDifficulty":"medium","installSteps":"1. Go to inkscape.org and click Download. 2. Run the installer for your operating system. 3. Open it and start from File > New with the default document.","honestLimits":"Vector drawing is a different way of thinking than photo editing, so it feels odd at first; trace a simple project like making one sign. It will not open every Illustrator file perfectly. Text handling in imported files can shift fonts if you do not have them installed.","verifiedFreeOn":"2026-10-30","recheckDate":"2027-04-30","license":"GPL-3.0","website":"https://inkscape.org","platforms":["Windows","macOS","Linux"],"sizeEstimate":"About 200 MB"},{"id":"darktable","name":"Darktable","category":"photos","tagline":"Organize and fix camera photos like a pro, including RAW files.","whatItDoes":"If your camera saves RAW files, Darktable corrects color, exposure, and lens problems non-destructively and organizes thousands of photos by date and rating. It is the free Lightroom for the family photo library.","trulyFree":"yes","installDifficulty":"medium","installSteps":"1. Go to darktable.org and click the install button for your operating system. 2. Run the installer. 3. Point it at your Pictures folder so it can index your photos.","honestLimits":"The interface is dense with sliders aimed at enthusiasts; casual snap editors may prefer GIMP or just their phone. It does not print photo books or do advanced face-tagging. Expect a session or two before it feels natural.","verifiedFreeOn":"2026-10-30","recheckDate":"2027-04-30","license":"GPL-3.0","website":"https://www.darktable.org","platforms":["Windows","macOS","Linux"],"sizeEstimate":"About 200 MB"},{"id":"thunderbird","name":"Thunderbird","category":"office","tagline":"Gmail, Outlook, and other email accounts in one calm program.","whatItDoes":"Bring several email accounts together in one app that lives on your computer, works offline, and does not show ads next to your messages. Also handles calendars, contacts, and mailing lists.","trulyFree":"yes","installDifficulty":"easy","installSteps":"1. Go to thunderbird.net and click Download. 2. Run the installer. 3. On first run, enter your email address and password; most providers are auto-configured. 4. For Gmail you may need to allow \"less secure apps are not used; app password\" per Google's current guidance in your account settings.","honestLimits":"It is a desktop client: mail still lives with your provider unless you use POP. Setting it up requires your email provider's settings, which occasionally takes Googling. Calendar syncing with some corporate Exchange setups is limited.","verifiedFreeOn":"2026-10-30","recheckDate":"2027-04-30","license":"MPL-2.0","website":"https://www.thunderbird.net","platforms":["Windows","macOS","Linux"],"sizeEstimate":"About 100 MB"}]</script>
+</body>
+</html>
